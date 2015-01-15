@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+ONLY_LIST="read_amr_header read_hydro_header read_amr read_hydro add_tree allocate_combined deallocate_combined
+deallocate_amr deallocate_hydro deallocate_translation deallocate_level_lists
+get_hydro save_single load_single scale_u log10_u column_density
+amr_filename hydro_filename read_ncpus_from_header read_all convert_to_single"
+f2py3 --fcompiler=intel --f90flags="-heap-arrays 1024 -check all -warn all -g -traceback" -DF2PY_REPORT_ATEXIT -DF2PY_REPORT_ON_ARRAY_COPY=1 --debug-capi -c -m amr_utils_py amr_utils.f90 only: $ONLY_LIST
+#f2py3 --fcompiler=intel --f90flags="-check all -warn all -g -traceback" -DF2PY_REPORT_ATEXIT -DF2PY_REPORT_ON_ARRAY_COPY=1 --debug-capi -c -m amr_utils_py amr_utils.f90 only: $ONLY_LIST  

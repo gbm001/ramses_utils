@@ -1,5 +1,7 @@
 .SUFFIXES:
 
+export
+
 F90            = gfortran
 MPIF90         = mpif90    # Only if using MPI
 DEBUG          = 2         # Either 0, 1 or 2
@@ -79,36 +81,27 @@ endif
 # Code compilation
 # ----------------------------------------------------------------
 
-.PHONY: all clean depend distclean
+.PHONY: all clean fileclean depend distclean ${PROGRAMS}
 .PRECIOUS: %.o
 .DEFAULT: all
 
-all: fort.dep ${PROGRAMS}
+all: depend ${PROGRAMS}
 
-%: %.o
-	${F90} ${FFLAGS} ${LDFLAGS} -o ${EXEDIR}/$@ $^
+${PROGRAMS}: depend
+	@${MAKE} --no-print-directory -f makefile.inc $@
 
-%.o: %.F90
-	${F90} ${FFLAGS} -c $<
+clean: fileclean depend
 
-%.o: %.f90
-	${F90} ${FFLAGS} -c $<
-
-clean: depend
+fileclean:
 	\rm -f *.o
 	\rm -f *.mod
 	\rm -f *.F90~
 
-distclean: clean
+distclean: fileclean
 	\rm -f ${PROGRAMS}
-	rm fort.dep
+	\rm -f fort.dep
 
 depend:
 	python3 make_depends.py ${VPATH}
 
-# Dependencies
-# ----------------------------------------------------------------
-
-fort.dep : depend
-
--include fort.dep
+Makefile: ;

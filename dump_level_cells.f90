@@ -14,8 +14,8 @@ program dump_level_cells_program
     cmd_args = command_argument_count()
     if ((cmd_args /= 2) .AND. (cmd_args /= 4)) then
         write (6,*) "Wrong number of command line arguments (expecting 2 or 4)!"
-        write (6,*) "First argument: input directory of combined output file"
-        write (6,*) "Second argument: output number of desired output"
+        write (6,*) "First argument: filename of combined output file"
+        write (6,*) "Second argument: desired level"
         write (6,*) "Third/fourth arguments: min/max hydro column of data"
         stop 1
     end if

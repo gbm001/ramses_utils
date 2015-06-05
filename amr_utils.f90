@@ -191,7 +191,6 @@ module amr_utils
         
         character (LEN=2000)               :: line
         character (LEN=:), allocatable     :: item, quantity_str
-        integer                            :: i
         
         call info_filename(ioutput, header_name_aux)
         header_file_path = output_path//'/'//header_name_aux
@@ -855,7 +854,7 @@ module amr_utils
         if (lowmem_tables) then
             iunit = 200000 + icpu
             open(unit=iunit, status='scratch', form='unformatted')
-            write (unit=iunit), translation_table
+            write (unit=iunit) translation_table
             rewind(unit=iunit)
         else
             translation_tables(:, icpu) = translation_table
@@ -871,7 +870,7 @@ module amr_utils
         
         if (lowmem_tables) then
             iunit = 200000 + icpu
-            read (unit=iunit), translation_table
+            read (unit=iunit) translation_table
         else
             translation_table = translation_tables(:, icpu)
         end if
@@ -1305,12 +1304,16 @@ module amr_utils
         logical, intent(in), optional     :: leaf_only
         
         integer                           :: grid_size, cell_size
-        integer                           :: i, j, k
         integer                           :: gx, gy, gz
         integer                           :: igrid
         double precision                  :: xg_loc(1:3)
         logical                           :: use_leaf_only
         logical                           :: lt(1:8) ! leaf table
+        
+        ! just to stop gfortran warnings...
+        xg_loc = 0.0
+        gy = 0
+        gz = 0
         
         use_leaf_only = .FALSE.
         if (present(leaf_only)) then
@@ -1559,7 +1562,7 @@ module amr_utils
                                 else if (j==max_grid(2)) then
                                     frac(2) = max_r(2, ind) - dble(max_grid(2)-1)
                                 else
-                                    frac(1) = 1.0d0
+                                    frac(2) = 1.0d0
                                 end if
                                 map(i, j) = map(i, j) + contrib * product(frac)
                             end do

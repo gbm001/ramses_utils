@@ -73,7 +73,7 @@ else ifeq (${OPT},3)
     FFLAGS += -O3
 else ifeq (${OPT},FAST)
     ifeq (${F90},ifort)
-        FFLAGS += -fast #-O3 -static-intel -ip -ipo -xHOST
+        FFLAGS += -ipo -O3 -no-prec-div -static-intel -xHost #-fast
     else ifeq (${F90},gfortran)
         FFLAGS += -Ofast -march=native
     else

@@ -27,7 +27,11 @@ FFLAGS += $(foreach INCDIR, ${INCLUDE_DIR}, -I ${INCDIR})
 # Remove trailing whitespace
 # ----------------------------------------------------------------
 F90           := $(strip ${F90})
-PROFILE       := $(strip $(PROFILE))
+MPIF90        := $(strip ${MPIF90})
+DEBUG         := $(strip $(DEBUG))
+OPT           := $(strip $(OPT))
+OPENMP        := $(strip $(OPENMP))
+MPI           := $(strip $(MPI))
 
 # Compiler flags
 # ----------------------------------------------------------------

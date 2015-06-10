@@ -1,4 +1,5 @@
 module amr_utils
+    use, intrinsic :: ISO_FORTRAN_ENV, only: FILE_STORAGE_SIZE
     implicit none
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -80,6 +81,10 @@ module amr_utils
     integer, parameter :: maxout=1000
     integer, parameter :: maxlevel=100
     integer, parameter :: overload=1  ! assume this isn't changed
+    
+    ! File implementation details
+    integer, parameter :: sp_iosize = STORAGE_SIZE(1.0_sp) / FILE_STORAGE_SIZE
+    integer, parameter :: dp_iosize = STORAGE_SIZE(1.0_dp) / FILE_STORAGE_SIZE
     
     ! RAMSES header parameters
     integer :: ncpu, ndim, nx, ny, nz, nlevelmax_cpu, ngridmax_cpu
@@ -653,12 +658,13 @@ module amr_utils
         integer                              :: sp_in, dp_in, qdp_in
         integer                              :: min_ivar_in, max_ivar_in, ivar
         
+        integer                              :: cur_pos, data_iosize
         integer                              :: logicals(10)
         logical :: file_son, file_father, file_next, file_prev, file_level
         logical :: file_flag1, file_cpu_map, file_nbor, file_xg, file_u
         
         open(unit=50, file=trim(filename),&
-            &status='old', form='unformatted')
+            &status='old', access='stream')
         
         ! Read logicals which are stored as integers as different compilers
         ! do logicals in different ways...
@@ -737,56 +743,72 @@ module amr_utils
             if (keep_father) then
                 read (50) father
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_next) then
             if (keep_next) then
                 read (50) next
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_prev) then
             if (keep_prev) then
                 read (50) prev
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_level) then
             if (keep_level) then
                 read (50) level
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_flag1) then
             if (keep_flag1) then
                 read (50) flag1
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_cpu_map) then
             if (keep_cpu_map) then
                 read (50) cpu_map
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_nbor) then
             if (keep_nbor) then
                 read (50) nbor
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax * twondim
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_xg) then
             if (keep_xg) then
                 read (50) xg
             else
-                read (50)
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax * ndim
+                read (50, pos=cur_pos+data_iosize)
             end if
         end if
         if (file_u) then
@@ -795,12 +817,16 @@ module amr_utils
                     if (ivar >= min_ivar .AND. ivar <= max_ivar) then
                         read (50) u(:, :, ivar)
                     else
-                        read (50)
+                        inquire(unit=50, pos=cur_pos)
+                        data_iosize = dp_iosize * ngridmax * twotondim
+                        read (50, pos=cur_pos+data_iosize)
                     end if
                 end do
             else
                 do ivar=min_ivar_in, max_ivar_in
-                    read (50)
+                    inquire(unit=50, pos=cur_pos)
+                    data_iosize = dp_iosize * ngridmax * twotondim
+                    read (50, pos=cur_pos+data_iosize)
                 end do
             end if
         end if
@@ -823,7 +849,7 @@ module amr_utils
         integer                              :: logicals(10)
         
         open(unit=50, file=trim(filename),&
-            &status='replace', form='unformatted')
+            &status='replace', access='stream')
         
         ! Write logicals, storing as integers as different compilers
         ! do logicals in different ways...

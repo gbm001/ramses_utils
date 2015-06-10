@@ -54,8 +54,8 @@ endif
 # Standards flags
 ifeq (${F90},ifort)
     #FFLAGS += -fpscomp logicals
-    FFLAGS += -assume noold_ldout_format,noold_maxminloc,noold_unit_star,noold_xor,std_mod_proc_name,fpe_summary
-                    # byterecl,minus0,protect_parens,realloc_lhs
+    FFLAGS += -assume noold_ldout_format,noold_maxminloc,noold_unit_star,noold_xor,std_mod_proc_name,fpe_summary,byterecl
+                    # minus0,protect_parens,realloc_lhs
 endif
 
 # Optimisation flags

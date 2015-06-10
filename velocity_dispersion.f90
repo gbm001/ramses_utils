@@ -149,13 +149,8 @@ program velocity_dispersion
     type(stats_type)                    :: median_stats, mad_stats
     
     double precision                    :: vmag, weight
-    double precision                    :: var_sqd, divisor, std_dev_sqd
     
     double precision, allocatable       :: dx_stack(:)
-    type(sample_data_type), allocatable :: means(:)
-    type(sample_data_type), allocatable :: std_devs(:)
-    type(sample_data_type), allocatable :: medians(:)
-    type(sample_data_type), allocatable :: mads(:)
     
     lowmem_tables=.TRUE.
     keep_father=.FALSE.

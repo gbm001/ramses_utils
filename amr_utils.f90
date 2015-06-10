@@ -813,20 +813,14 @@ module amr_utils
         end if
         if (file_u) then
             if (keep_u) then
-                do ivar=min_ivar_in, max_ivar_in
-                    if (ivar >= min_ivar .AND. ivar <= max_ivar) then
-                        read (50) u(:, :, ivar)
-                    else
+                do ivar=min_ivar_in, max_ivar
+                    if (ivar < min_ivar) then
                         inquire(unit=50, pos=cur_pos)
                         data_iosize = dp_iosize * ngridmax * twotondim
                         read (50, pos=cur_pos+data_iosize)
+                    else
+                        read (50) u(:, :, ivar)
                     end if
-                end do
-            else
-                do ivar=min_ivar_in, max_ivar_in
-                    inquire(unit=50, pos=cur_pos)
-                    data_iosize = dp_iosize * ngridmax * twotondim
-                    read (50, pos=cur_pos+data_iosize)
                 end do
             end if
         end if

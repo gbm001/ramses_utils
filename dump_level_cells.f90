@@ -1,5 +1,6 @@
 program dump_level_cells_program
     use amr_utils
+    implicit none
     
     character (LEN=:), allocatable :: input_filename
     character (LEN=:), allocatable :: temp_str

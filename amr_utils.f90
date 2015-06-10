@@ -653,14 +653,27 @@ module amr_utils
         integer                              :: sp_in, dp_in, qdp_in
         integer                              :: min_ivar_in, max_ivar_in, ivar
         
+        integer                              :: logicals(10)
         logical :: file_son, file_father, file_next, file_prev, file_level
         logical :: file_flag1, file_cpu_map, file_nbor, file_xg, file_u
         
         open(unit=50, file=trim(filename),&
             &status='old', form='unformatted')
         
-        read (50) file_son, file_father, file_next, file_prev, file_level,&
-                 &file_flag1, file_cpu_map, file_nbor, file_xg, file_u
+        ! Read logicals which are stored as integers as different compilers
+        ! do logicals in different ways...
+        read (50) logicals
+        file_son = (logicals(1) == 1)
+        file_father = (logicals(2) == 1)
+        file_next = (logicals(3) == 1)
+        file_prev = (logicals(4) == 1)
+        file_level = (logicals(5) == 1)
+        file_flag1 = (logicals(6) == 1)
+        file_cpu_map = (logicals(7) == 1)
+        file_nbor = (logicals(8) == 1)
+        file_xg = (logicals(9) == 1)
+        file_u = (logicals(10) == 1)
+        
         read (50) min_ivar_in, max_ivar_in
         ! Verify we have the data we want
         ! (but we could add it later if not, so only a warning)
@@ -807,12 +820,26 @@ module amr_utils
         !    nbor, xg, u
         integer                              :: ivar
         character (LEN=*), intent(in)        :: filename
+        integer                              :: logicals(10)
         
         open(unit=50, file=trim(filename),&
             &status='replace', form='unformatted')
         
-        write (50) .TRUE., keep_father, keep_next, keep_prev, keep_level,&
-                  &keep_flag1, keep_cpu_map, keep_nbor, keep_xg, keep_u
+        ! Write logicals, storing as integers as different compilers
+        ! do logicals in different ways...
+        logicals = 0
+        logicals(1) = 1
+        if (keep_father) logicals(2) = 1
+        if (keep_next) logicals(3) = 1
+        if (keep_prev) logicals(4) = 1
+        if (keep_level) logicals(5) = 1
+        if (keep_flag1) logicals(6) = 1
+        if (keep_cpu_map) logicals(7) = 1
+        if (keep_nbor) logicals(8) = 1
+        if (keep_xg) logicals(9) = 1
+        if (keep_u) logicals(10) = 1
+        write (50) logicals
+        
         write (50) ivar_min_use, ivar_max_use
         
         write (50) ndim, maxout, maxlevel, sp, dp, qdp, nvar
@@ -1297,7 +1324,8 @@ module amr_utils
         ! Scan through all the grids on level level_in. Scan all the hydro
         ! quantities for their cells between columns ivar_min_in and
         ! ivar_max_in. Store these in the flat grid dump_grid. Leave gaps from
-        ! AMR unchanged. If leaf_only, 
+        ! AMR unchanged. If leaf_only, only change the value if the cell
+        ! is a leaf cell.
         integer, intent(in)               :: level_in
         integer, intent(in)               :: iv_min, iv_max
         double precision, intent(inout)   :: dump_cells(:,:,:,:)

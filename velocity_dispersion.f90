@@ -1,5 +1,6 @@
 module stats_scratch_data
     use quickselect_mod, calc_median => median
+    implicit none
 
     type stats_type
         double precision              :: mean
@@ -127,6 +128,7 @@ end module stats_scratch_data
 program velocity_dispersion
     use stats_scratch_data
     use amr_utils
+    implicit none
     
     double precision, parameter    :: pc=3.0856776d+18      ! pc in cm
     double precision, parameter    :: km_s=100000.d0        ! km/s in cm/s

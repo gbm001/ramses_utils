@@ -5,12 +5,13 @@ export
 F90            = gfortran
 MPIF90         = mpif90    # Only if using MPI
 DEBUG          = 2         # Either 0, 1 or 2
-OPT            = 0         # Either 0, 1, 2, 3 or FAST
+OPT            = FAST      # Either 0, 1, 2, 3 or FAST
 OPENMP         = 0         # Either 0 or 1
 MPI            = 0         # Either 0 or 1
 
 # List of executables to be built within the package
-PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion
+PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
+           power_spectrum
 
 # Compilation directories
 SRCDIR = ${PWD}
@@ -48,6 +49,13 @@ else ifeq (${DEBUG},2)
         FFLAGS += -fcheck=all -pedantic -Wall -Wextra -ffpe-trap=invalid,zero,overflow,underflow
     endif
     FFLAGS += -DDEBUG
+endif
+
+# Standards flags
+ifeq (${F90},ifort)
+    #FFLAGS += -fpscomp logicals
+    FFLAGS += -assume noold_ldout_format, noold_maxminloc, noold_unit_star, noold_xor, std_mod_proc_name, fpe_summary
+                    # byterecl, minus0, protect_parens, realloc_lhs
 endif
 
 # Optimisation flags

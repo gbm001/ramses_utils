@@ -190,7 +190,7 @@ program power_spectrum_program
                      &data bin average'
     
     do i=1,N/2
-        write (10,'(5(G0,:,1X))') dble(i)+0.d5, bin_centres(i), bin_avg(i), i, tr_bin_avg(i)
+        write (10,'(5(G0,:,1X))') dble(i)+0.5d0, bin_centres(i), bin_avg(i), i, tr_bin_avg(i)
     end do
     
     close(10)

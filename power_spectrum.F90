@@ -15,6 +15,8 @@ program power_spectrum_program
     
     character (LEN=:), allocatable :: filename
     character (LEN=:), allocatable :: temp_str
+    character (LEN=5)              :: suffix
+    character (LEN=:), allocatable :: output_filename
     integer                        :: cmd_args, length
     integer                        :: select_level
     
@@ -173,7 +175,15 @@ program power_spectrum_program
         stop 'ndim /= 1,2 or 3!'
     end if
     
-    open (10, file='power_spec.dat')
+    suffix = get_single_suffix(filename)
+    
+    if (suffix == "") then
+        output_filename = "power_spec.dat"
+    else
+        output_filename = "power_spec_"//suffix//".dat"
+    end if
+    
+    open (10, file=output_filename)
     
     do i=1,N/2
         write (10,*) dble(i)+0.d5, bin_centres(i), bin_avg(i), i, tr_bin_avg(i)

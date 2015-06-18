@@ -331,6 +331,32 @@ module amr_utils
         write (6,*) "Created output file ", output_path
     end subroutine convert_to_single
     
+    function get_single_suffix(filename)
+        ! Take a conmbined tree single file filename and separate out the
+        ! RAMSES-style suffix - e.g. for output_00029.dat, return '00029'
+        character (LEN=*), intent(in)       :: filename
+        character (LEN=5)                   :: get_single_suffix
+        
+        integer                             :: len_filename
+        character (LEN=10)                  :: string_end
+        
+        get_single_suffix = ""
+        len_filename = len(filename)
+        
+        if (len_filename < 11) return
+        
+        string_end = filename(len_filename-9:len_filename)
+    
+        if (string_end(1:1) /= '_') return
+        if ((string_end(7:10) /= '.dat') .AND.&
+            &(string_end(7:10) /= '.DAT')) return
+        
+        if (verify(string_end(2:6), '0123456789') /= 0) return
+        
+        get_single_suffix = string_end(2:6)
+        
+    end function get_single_suffix
+    
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! File input/output routines (CPU trees)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

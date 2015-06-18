@@ -135,6 +135,8 @@ program velocity_dispersion
     double precision               :: v_scale
     
     character (LEN=:), allocatable :: filename
+    character (LEN=5)              :: suffix
+    character (LEN=:), allocatable :: output_filename
     integer                        :: length
     
     integer                        :: ilevel, iilevel, ind
@@ -251,8 +253,16 @@ program velocity_dispersion
     do ilevel=1,max_level
         dx_stack(ilevel) = dx_level(ilevel) * boxlen * unit_l / pc
     end do
+    
+    suffix = get_single_suffix(filename)
+    
+    if (suffix == "") then
+        output_filename = "vel_stats.dat"
+    else
+        output_filename = "vel_stats_"//suffix//".dat"
+    end if
 
-    open(1, file='vel_stats.dat')
+    open(1, file=output_filename)
     
     ! NOTE THAT THE MEDIAN BASED STATISTICS ARE NOT WEIGHTED BY GRID SIZE
     ! (this should make no difference for fixed grids)

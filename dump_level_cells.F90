@@ -4,7 +4,8 @@ program dump_level_cells_program
     
     character (LEN=:), allocatable :: input_filename
     character (LEN=:), allocatable :: temp_str
-    character (LEN=256)            :: out_filename
+    character (LEN=5)              :: suffix
+    character (LEN=256)            :: output_filename
     integer                        :: cmd_args
     integer                        :: length
     integer                        :: select_level, cells_size
@@ -88,10 +89,16 @@ program dump_level_cells_program
     call dump_level_cells(select_level, select_ivar_min,&
                          &select_ivar_max, dump_cells, leaf_only=.TRUE.)
     
-    write (out_filename,'(A,I0,A)') 'level_', select_level, '.dat'
+    suffix = get_single_suffix(input_filename)
+    
+    if (suffix == "") then
+        write (output_filename,'(A,I0,A)') 'level_', select_level, '.dat'
+    else
+        write (output_filename,'(A,I0,A,A,A)') 'level_', select_level, '_', suffix, '.dat'
+    end if
     
     ! Write to level_N.dat file
-    open(1, file=out_filename, access='stream', form='unformatted')
+    open(1, file=output_filename, access='stream', form='unformatted')
     write(1) ndim, cells_size, select_ivar_min, select_ivar_max
     write(1) dump_cells
     close(1)

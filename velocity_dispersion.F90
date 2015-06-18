@@ -273,9 +273,9 @@ program velocity_dispersion
     ! Columns are: dx, mean of means, std_dev of means, mean of std_devs,
     ! std_dev of std_devs, median of medians, mad of medians, median of mads,
     ! mad of mads
-    write (1, '(A)') '# dx; mean of means; std dev of means; mean of std devs;'&
-                    &' std dev of std devs; median of medians; median of mads;'&
-                    &' mad of mads'
+    write (1, '(A)') '# dx; mean of means; std dev of means; mean of std devs;&
+                    & std dev of std devs; median of medians; median of mads;&
+                    & mad of mads'
     
     do ilevel=1,max_level
         mean_stats = results_stack(ilevel)%means%stats()

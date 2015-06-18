@@ -185,9 +185,9 @@ program power_spectrum_program
     
     open (10, file=output_filename)
     
-    write (10, '(A)') '# (square binning) bin centre; data bin centre; '&
-                     &'data bin average; (triangle binning) bin centre; '&
-                     &'data bin average'
+    write (10, '(A)') '# (square binning) bin centre; data bin centre; &
+                     &data bin average; (triangle binning) bin centre; &
+                     &data bin average'
     
     do i=1,N/2
         write (10,'(5(G0,:,1X))') dble(i)+0.d5, bin_centres(i), bin_avg(i), i, tr_bin_avg(i)

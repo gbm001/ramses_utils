@@ -98,7 +98,7 @@ endif
 
 .PHONY: all clean fileclean depend distclean programs tests ${PROGRAMS}
 .PRECIOUS: %.o
-.DEFAULT: programs
+.DEFAULT_GOAL := programs
 
 all: programs tests
 

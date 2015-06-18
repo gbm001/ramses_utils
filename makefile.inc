@@ -1,7 +1,7 @@
 -include fort.dep
 
 %: %.o
-	${F90} ${FFLAGS} ${LDFLAGS} -o ${EXEDIR}/$@ $^
+	${F90} ${FFLAGS} ${LDFLAGS} -o ${EXEDIR}/$@ $^ ${LDOBJ}
 
 %.o: %.F90
 	${F90} ${FFLAGS} -c $<

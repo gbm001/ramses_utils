@@ -78,7 +78,7 @@ module stats_scratch_data
         mean = sum(self%values(1:N)*self%weights(1:N)) / sum_weights
         
         ! standard deviation
-        M = count(self%weights(1:N) /= 0.d0)
+        M = count(self%weights(1:N) > tiny(1.d0))
         if (M > 1) then
             aux = sum(self%weights(1:N) * (self%values(1:N) - mean)**2)
             bias = (dble(M)-1.d0) / dble(M)

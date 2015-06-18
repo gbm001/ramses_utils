@@ -12,6 +12,7 @@ MPI            = 0         # Either 0 or 1
 # List of executables to be built within the package
 PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
            power_spectrum
+TEST_PROGRAMS = test_binning
 
 # Compilation directories
 SRCDIR = ${PWD}
@@ -23,6 +24,8 @@ MODULEDIR = ${SRCDIR}
 INCLUDE_DIR += ${MODULEDIR} #${HEADERS}
 
 FFLAGS += $(foreach INCDIR, ${INCLUDE_DIR}, -I ${INCDIR})
+LDFLAGS +=
+LDOBJ += libfftw3.a
 
 # Remove trailing whitespace
 # ----------------------------------------------------------------
@@ -93,11 +96,15 @@ endif
 # Code compilation
 # ----------------------------------------------------------------
 
-.PHONY: all clean fileclean depend distclean ${PROGRAMS}
+.PHONY: all clean fileclean depend distclean programs tests ${PROGRAMS}
 .PRECIOUS: %.o
-.DEFAULT: all
+.DEFAULT: programs
 
-all: depend ${PROGRAMS}
+all: programs tests
+
+programs: depend ${PROGRAMS}
+
+tests: depend ${TEST_PROGRAMS}
 
 ${PROGRAMS}: depend
 	@${MAKE} --no-print-directory -f makefile.inc $@
@@ -107,6 +114,7 @@ clean: fileclean depend
 fileclean:
 	\rm -f *.o
 	\rm -f *.mod
+	\rm -f *.f90~
 	\rm -f *.F90~
 
 distclean: fileclean

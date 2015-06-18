@@ -1,5 +1,6 @@
 module amr_utils
-    use, intrinsic :: ISO_FORTRAN_ENV, only: FILE_STORAGE_SIZE
+    use, intrinsic :: ISO_FORTRAN_ENV, only: FILE_STORAGE_SIZE, &
+                                             & INT64, REAL128
     implicit none
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -77,12 +78,16 @@ module amr_utils
     ! Assume double precision
     integer, parameter :: sp=kind(1.0E0)
     integer, parameter :: dp=kind(1.0D0)   ! real*8
-    integer, parameter :: qdp=kind(1.0_16) ! real*16 ! QUADHILBERT ONLY
+    integer, parameter :: qdp=REAL128      ! real*16 ! QUADHILBERT ONLY
+    integer, parameter :: i8b=INT64
+    integer, parameter :: csp=kind((1.0_sp, 1.0_sp))
+    integer, parameter :: cdp=kind((1.0_dp, 1.0_dp))
     integer, parameter :: maxout=1000
     integer, parameter :: maxlevel=100
     integer, parameter :: overload=1  ! assume this isn't changed
     
     ! File implementation details
+    integer, parameter :: int_iosize = STORAGE_SIZE(1) / FILE_STORAGE_SIZE
     integer, parameter :: sp_iosize = STORAGE_SIZE(1.0_sp) / FILE_STORAGE_SIZE
     integer, parameter :: dp_iosize = STORAGE_SIZE(1.0_dp) / FILE_STORAGE_SIZE
     
@@ -726,7 +731,9 @@ module amr_utils
         if (maxlevel_in /= maxlevel) stop "Wrong maxlevel!"
         if (sp_in /= sp) stop "Wrong sp!"
         if (dp_in /= dp) stop "Wrong dp!"
-        if (qdp_in /= qdp) stop "Wrong qdp!"
+!         if (qdp_in /= qdp) then                  ! we don't use qdp (yet?)
+!             write (6,*) "Warning - wrong qdp!"
+!         end if
         twondim = 2 * ndim
         twotondim = 2**ndim
         read (50) nlevelmax, ngridmax, free
@@ -744,7 +751,7 @@ module amr_utils
                 read (50) father
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -753,7 +760,7 @@ module amr_utils
                 read (50) next
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -762,7 +769,7 @@ module amr_utils
                 read (50) prev
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -771,7 +778,7 @@ module amr_utils
                 read (50) level
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -780,7 +787,7 @@ module amr_utils
                 read (50) flag1
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -789,7 +796,7 @@ module amr_utils
                 read (50) cpu_map
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax
+                data_iosize = int_iosize * ngridmax
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -798,7 +805,7 @@ module amr_utils
                 read (50) nbor
             else
                 inquire(unit=50, pos=cur_pos)
-                data_iosize = dp_iosize * ngridmax * twondim
+                data_iosize = int_iosize * ngridmax * twondim
                 read (50, pos=cur_pos+data_iosize)
             end if
         end if
@@ -1384,8 +1391,8 @@ module amr_utils
         cell_size = 2**level_in
         
         igrid = headl(level_in)
-        lt = .TRUE.
         do
+            lt = .TRUE.
             xg_loc(1:ndim) = xg(igrid, 1:ndim)
             gx = nint(xg_loc(1) * grid_size + 0.5)
             if (ndim>1) gy = nint(xg_loc(2) * grid_size + 0.5)

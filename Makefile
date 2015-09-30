@@ -11,7 +11,7 @@ MPI            = 0         # Either 0 or 1
 
 # List of executables to be built within the package
 PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
-           power_spectrum
+           power_spectrum rms_vel_3d
 TEST_PROGRAMS = test_binning
 
 # Compilation directories

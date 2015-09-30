@@ -16,7 +16,7 @@ module amr_utils
     !
     ! Like the RAMSES trees, the combined tree has the usual son, father, next,
     ! prev, flag1, cpu_map, nbor, xg and (for hydro) u variables. An extra
-    ! variable level is avaialble, storing the level of that oct. The tree, as
+    ! variable level is available, storing the level of that oct. The tree, as
     ! in RAMSES, consists of a collection of octs (in 3D). However, the RAMSES
     ! mechanism of addressing individual cells by ncoarse + ind*gridmax is not
     ! used. First there is no single coarse cell at the start (i.e. ncoarse=0);

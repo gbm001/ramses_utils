@@ -48,6 +48,8 @@ program rms_vel_3d_program
     
     vsqd_sum = 0.d0
     
+    ngrid = -1
+    
     do ilevel=nlevelmax, 1, -1
         ngrid = numbl(ilevel)
         if (ngrid==0) cycle
@@ -61,6 +63,10 @@ program rms_vel_3d_program
         end do
         exit ! only do the lowest occupied level (assume fixed grid)
     end do
+    
+    if (ngrid == -1) then
+        stop "We didn't find any cells!"
+    end if
     
     vsqd_sum = vsqd_sum / dble(twotondim)
     vsqd_sum = vsqd_sum / dble(ngrid)

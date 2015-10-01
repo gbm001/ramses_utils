@@ -8,10 +8,12 @@ DEBUG          = 2         # Either 0, 1 or 2
 OPT            = FAST      # Either 0, 1, 2, 3 or FAST
 OPENMP         = 0         # Either 0 or 1
 MPI            = 0         # Either 0 or 1
+FFT_TOOLS      = 0         # Either 0 or 1
 
 # List of executables to be built within the package
 PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
-           power_spectrum rms_vel_3d
+           rms_vel_3d
+FFT_PROGRAMS = power_spectrum
 TEST_PROGRAMS = test_binning
 
 # Compilation directories
@@ -25,7 +27,9 @@ INCLUDE_DIR += ${MODULEDIR} #${HEADERS}
 
 FFLAGS += $(foreach INCDIR, ${INCLUDE_DIR}, -I ${INCDIR})
 LDFLAGS +=
-LDOBJ += libfftw3.a
+LDOBJ +=
+FFT_LDFLAGS +=
+FFT_LDOBJ += libfftw3.a
 
 # Remove trailing whitespace
 # ----------------------------------------------------------------
@@ -35,6 +39,7 @@ DEBUG         := $(strip $(DEBUG))
 OPT           := $(strip $(OPT))
 OPENMP        := $(strip $(OPENMP))
 MPI           := $(strip $(MPI))
+FFT_TOOLS     := $(strip $(FFT_TOOLS))
 
 # Compiler flags
 # ----------------------------------------------------------------
@@ -91,6 +96,13 @@ ifeq (${PARALLEL},1)
     else ifeq (${F90},gfortran)
         FFLAGS += -fopenmp
     endif
+endif
+
+# Tools requiring FFT
+ifeq (${FFT_TOOLS},1)
+    PROGRAMS += ${FFT_PROGRAMS}
+    LDFLAGS += ${FFT_LDFLAGS}
+    LDOBJ += ${FFT_LDOBJ}
 endif
 
 # Code compilation

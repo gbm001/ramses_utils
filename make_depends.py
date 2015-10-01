@@ -1,11 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Make dependencies for use in Makefile for all Fortran source files within list of directories
+
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 import sys
 import glob
 import os
-
 
 class FortranFile:
     """Simple class to store names of dependencies"""

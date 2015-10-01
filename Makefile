@@ -122,6 +122,6 @@ distclean: fileclean
 	\rm -f fort.dep
 
 depend:
-	python3 make_depends.py ${VPATH}
+	python make_depends.py ${VPATH}
 
 Makefile: ;

@@ -53,7 +53,7 @@ program rms_vel_3d_program
         if (ngrid==0) cycle
         ! Otherwise we have found the lowest level with cells
         igrid = headl(ilevel)
-        do i=1,ncache
+        do i=1,ngrid
             do ind=1,twotondim
                 vsqd_sum = vsqd_sum + sum(u(igrid, ind, 2:4)**2)
             end do
@@ -66,29 +66,5 @@ program rms_vel_3d_program
     vsqd_sum = vsqd_sum / dble(ngrid)
     
     write(6,*) "rms velocity: ", sqrt(vsqd_sum)
-    
-!     integer, intent(in)               :: n_cells
-!     integer, intent(in)               :: ivar
-!     double precision, intent(out)     :: cells(1:n_cells)
-!     
-!     integer                           :: ilevel, ind, i
-!     integer                           :: igrid, ncache, slot
-!     
-!     if (.NOT. (keep_next .AND. keep_u)) then
-!         stop "Cannot get_hydro without 'next' and 'u' data!"
-!     end if
-!     
-!     slot = 1
-!     do ilevel=1, nlevelmax
-!         igrid = headl(ilevel)
-!         ncache = numbl(ilevel)
-!         do i=1,ncache
-!             do ind=1,twotondim
-!                 cells(slot) = u(igrid, ind, ivar)
-!                 slot = slot + 1
-!             end do
-!             igrid = next(igrid)
-!         end do
-!     end do
     
 end program rms_vel_3d_program

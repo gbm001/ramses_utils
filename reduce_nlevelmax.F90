@@ -72,7 +72,7 @@ program reduce_nlevelmax_program
         temp_int2D = numbl_cpu(:, 1:new_nlevelmax)
         call move_alloc(temp_int2D, numbl_cpu)
         
-        allocate(temp_int2D(1:ncpu, 1:new_nlevelmax))
+        allocate(temp_int2D(1:10, 1:new_nlevelmax))
         temp_int2D = numbtot_cpu(:, 1:new_nlevelmax)
         call move_alloc(temp_int2D, numbtot_cpu)
 

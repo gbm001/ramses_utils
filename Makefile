@@ -12,7 +12,7 @@ FFT_TOOLS      = 0         # Either 0 or 1
 
 # List of executables to be built within the package
 PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
-           rms_vel_3d
+           rms_vel_3d reduce_nlevelmax
 FFT_PROGRAMS = power_spectrum
 TEST_PROGRAMS = test_binning
 

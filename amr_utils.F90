@@ -65,7 +65,7 @@ module amr_utils
     logical :: keep_xg=.TRUE.
     logical :: keep_u=.TRUE.
     ! Further extremely brief testing showed that making these parameters
-    ! made no discernable difference; YMMV. Left at variables for easier
+    ! made no discernable difference; YMMV. Left as variables for easier
     ! python integration.
     
     integer            :: min_ivar=0  ! Minimum ivar, change externally
@@ -123,8 +123,9 @@ module amr_utils
     
     ! Other RAMSES header information
     character (LEN=128) :: ordering
-    !real (kind=qdp), allocatable :: bound_key(:) ! Could be qdp or not
-                                                  ! so just skip over
+    logical :: use_qdp
+    real (kind=dp), allocatable :: bound_key_dp(:)
+    real (kind=qdp), allocatable :: bound_key_qdp(:)
     
     ! RAMSES AMR data
     integer, allocatable :: son_cpu(:), father_cpu(:), next_cpu(:), prev_cpu(:)
@@ -274,6 +275,11 @@ module amr_utils
             call hydro_filename(ioutput, icpu, hydro_filename_aux)
             call read_hydro_header(output_path//hydro_filename_aux, icpu)
             deallocate(headl_cpu, taill_cpu, numbl_cpu, numbtot_cpu)
+            if (use_qdp) then
+                deallocate(bound_key_qdp)
+            else
+                deallocate(bound_key_dp)
+            end if
         end do
         
         call allocate_combined(nlevelmax, ngrid_current, tot_cells)
@@ -384,6 +390,7 @@ module amr_utils
     subroutine read_amr_header_internal(iunit)
         ! Read header from RAMSES AMR cpu file
         integer, intent(in)                     :: iunit
+        integer                                 :: ierr
     
         read(unit=iunit) ncpu
         read(unit=iunit) ndim
@@ -427,12 +434,60 @@ module amr_utils
         read(unit=iunit) headf, tailf, numbf, used_mem, used_mem_tot
         read(unit=iunit) ordering
         if (trim(ordering) /= 'hilbert') stop 'Need hilbert ordering!'
-        !allocate(bound_key(0:ndomain))
-        read(unit=iunit) !bound_key
+        allocate(bound_key_dp(0:ndomain))
+        use_qdp = .FALSE.
+        read(unit=iunit, iostat=ierr) bound_key_dp(0:ndomain)
+        if (ierr /= 0) then
+            deallocate(bound_key_dp)
+            allocate(bound_key_qdp(0:ndomain))
+            backspace(iunit)
+            read(unit=iunit) bound_key_qdp(0:ndomain)
+            use_qdp = .TRUE.
+        end if
         !deallocate(bound_key)
     
         return
     end subroutine read_amr_header_internal
+    
+    subroutine write_amr_header_internal(iunit)
+        ! Write header to RAMSES AMR cpu file
+        integer, intent(in)                     :: iunit
+    
+        write(unit=iunit) ncpu
+        write(unit=iunit) ndim
+        write(unit=iunit) nx, ny, nz
+        write(unit=iunit) nlevelmax_cpu
+        write(unit=iunit) ngridmax_cpu
+        write(unit=iunit) nboundary
+        write(unit=iunit) ngrid_current_cpu
+        write(unit=iunit) boxlen
+        write(unit=iunit) noutput, iout, ifout
+        write(unit=iunit) tout(1:noutput)
+        write(unit=iunit) aout(1:noutput)
+        write(unit=iunit) t
+        write(unit=iunit) dtold(1:nlevelmax_cpu)
+        write(unit=iunit) dtnew(1:nlevelmax_cpu)
+        write(unit=iunit) nstep, nstep_coarse
+        write(unit=iunit) const, mass_tot_0, rho_tot
+        write(unit=iunit) omega_m, omega_l, omega_k, omega_b, h0,&
+                      & aexp_ini, boxlen_ini
+        write(unit=iunit) aexp, hexp, aexp_old, epot_tot_int, epot_tot_old
+        write(unit=iunit) mass_sph
+        
+        write(unit=iunit) headl_cpu(1:ncpu, 1:nlevelmax_cpu)
+        write(unit=iunit) taill_cpu(1:ncpu, 1:nlevelmax_cpu)
+        write(unit=iunit) numbl_cpu(1:ncpu, 1:nlevelmax_cpu)
+        write(unit=iunit) numbtot_cpu(1:10, 1:nlevelmax_cpu)
+        write(unit=iunit) headf, tailf, numbf, used_mem, used_mem_tot
+        write(unit=iunit) ordering
+        if (use_qdp) then
+            write(unit=iunit) bound_key_qdp
+        else
+            write(unit=iunit) bound_key_dp
+        end if
+    
+        return
+    end subroutine write_amr_header_internal
 
     subroutine read_amr(filename, icpu)
         ! Read data from RAMSES AMR cpu file
@@ -551,6 +606,115 @@ module amr_utils
         
         return
     end subroutine read_amr
+
+    subroutine write_amr(filename, icpu)
+        ! Read data to RAMSES AMR cpu file
+        character(LEN=*), intent(in)            :: filename
+        integer, intent(in)                     :: icpu
+        
+        integer                                 :: iunit
+        real (kind=dp), allocatable             :: xdp(:)
+        integer, allocatable                    :: iig(:), ind_grid(:)
+        integer                                 :: i, ind, igrid, istart
+        integer                                 :: ncache
+        integer                                 :: ilevel, ibound, iskip
+        
+        iunit = 10 + icpu
+        
+        if (.NOT. (keep_father .AND. keep_next .AND. keep_prev .AND. &
+                  &keep_flag1 .AND. keep_cpu_map .AND. keep_nbor .AND. &
+                  &keep_xg)) then
+            stop 'Need all AMR data (except keep_level) to make AMR cpu file!'
+        end if
+        
+        open(unit=iunit, file=trim(filename), status='unknown', form='unformatted')
+        
+        call write_amr_header_internal(iunit)
+        
+        write(unit=iunit) son_cpu(1:ncoarse)
+        write(unit=iunit) flag1_cpu(1:ncoarse)
+        write(unit=iunit) cpu_map_cpu(1:ncoarse)
+        
+        do ilevel=1,nlevelmax_cpu
+            do ibound=1,nboundary + ncpu
+                if (ibound <= ncpu) then
+                    ncache = numbl_cpu(ibound, ilevel)
+                    istart = headl_cpu(ibound, ilevel)
+                else
+                    ncache = numbb(ibound - ncpu, ilevel)
+                    istart = headb(ibound - ncpu, ilevel)
+                end if
+                if (ncache <= 0) cycle
+                allocate(ind_grid(1:ncache))
+                allocate(xdp(1:ncache), iig(1:ncache))
+                igrid=istart
+                do i=1,ncache
+                    ind_grid(i)=igrid
+                    igrid=next_cpu(igrid)
+                end do
+                write(unit=iunit) ind_grid
+
+                do i=1,ncache
+                    iig(i) = next_cpu(ind_grid(i))
+                end do
+                write(unit=iunit) iig
+
+                do i=1,ncache
+                    iig(i) = prev_cpu(ind_grid(i))
+                end do
+                write(unit=iunit) iig
+
+                do ind=1,ndim
+                    do i=1,ncache
+                        xdp(i) = xg_cpu(ind_grid(i), ind)
+                    end do
+                    write(unit=iunit) xdp
+                end do
+
+                do i=1,ncache
+                    iig(i) = father_cpu(ind_grid(i))
+                end do
+                write(unit=iunit) iig
+                
+                do ind=1,twondim
+                    do i=1,ncache
+                        iig(i) = nbor_cpu(ind_grid(i), ind)
+                    end do
+                    write(unit=iunit) iig
+                end do
+                
+                do ind=1,twotondim
+                    iskip=ncoarse+(ind-1)*ngridmax
+                    do i=1,ncache
+                        iig(i) = son_cpu(ind_grid(i) + iskip)
+                    end do
+                    write(unit=iunit) iig
+                end do
+                
+                do ind=1,twotondim
+                    iskip=ncoarse+(ind-1)*ngridmax
+                    do i=1,ncache
+                        iig(i) = cpu_map_cpu(ind_grid(i) + iskip)
+                    end do
+                    write(unit=iunit) iig
+                end do
+                
+                do ind=1,twotondim
+                    iskip=ncoarse+(ind-1)*ngridmax
+                    do i=1,ncache
+                        iig(i) = flag1_cpu(ind_grid(i) + iskip)
+                    end do
+                    write(unit=iunit) iig
+                end do
+                
+                deallocate(ind_grid, iig, xdp)
+            end do
+        end do
+        
+        close(unit=iunit)
+        
+        return
+    end subroutine write_amr
     
     subroutine read_hydro_header(filename, icpu)
         ! Read header from RAMSES AMR hydro cpu file
@@ -592,6 +756,20 @@ module amr_utils
         
         return
     end subroutine read_hydro_header_internal
+    
+    subroutine write_hydro_header_internal(iunit)
+        ! Write header to RAMSES AMR hydro cpu file
+        integer, intent(in)              :: iunit
+        
+        write(unit=iunit) ncpu
+        write(unit=iunit) nvar
+        write(unit=iunit) ndim
+        write(unit=iunit) nlevelmax_cpu
+        write(unit=iunit) nboundary
+        write(unit=iunit) gamma
+        
+        return
+    end subroutine write_hydro_header_internal
     
     subroutine read_hydro(filename, icpu)
         ! Read data from RAMSES AMR hydro cpu file
@@ -671,6 +849,68 @@ module amr_utils
         close(unit=iunit)
     
     end subroutine read_hydro
+    
+    subroutine write_hydro(filename, icpu)
+        ! Write data to RAMSES AMR hydro cpu file
+        character(LEN=*), intent(in)     :: filename
+        integer, intent(in)              :: icpu
+        
+        integer                          :: iunit
+        real (kind=dp), allocatable      :: xdp(:)
+        integer, allocatable             :: ind_grid(:)
+        integer                          :: i, ind
+        integer                          :: ilevel, ibound, ivar
+        integer                          :: istart, iskip, igrid
+        
+        iunit = 100000 + icpu
+        
+        if (.NOT. (keep_u .AND. keep_next)) then
+            stop "Cannot write hydro data without 'u' and 'next' data!"
+        end if
+        
+        if (ivar_min_use /= 1 .OR. ivar_max_use /= nvar) then
+            stop "Using a custom min_ivar or max_ivar &
+                 &is probably a bad idea..."
+        end if
+        
+        open(unit=iunit, file=trim(filename), status='unknown', form='unformatted')
+        
+        call write_hydro_header_internal(iunit)
+        
+        do ilevel=1,nlevelmax_cpu
+            do ibound=1,nboundary + ncpu
+                write(unit=iunit) ilevel
+                write(unit=iunit) ncache
+                if (ibound <= ncpu) then
+                    ncache = numbl_cpu(ibound, ilevel)
+                    istart = headl_cpu(ibound, ilevel)
+                else
+                    ncache = numbb(ibound - ncpu, ilevel)
+                    istart = headb(ibound - ncpu, ilevel)
+                end if
+                if (ncache <= 0) cycle
+                allocate(ind_grid(1:ncache), xdp(1:ncache))
+                igrid = istart
+                do i=1,ncache
+                    ind_grid(i)=igrid
+                    igrid=next_cpu(igrid)
+                end do
+                do ind=1,twotondim
+                    iskip = ncoarse + (ind-1)*ngridmax_cpu
+                    do ivar=1,nvar
+                        do i=1,ncache
+                           xdp(i) = u_cpu(ind_grid(i)+iskip, ivar)
+                        end do
+                        write(unit=iunit) xdp
+                    end do
+                end do
+                deallocate(xdp, ind_grid)
+            end do
+        end do
+        
+        close(unit=iunit)
+    
+    end subroutine write_hydro
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! File input/output routines (combined tree)
@@ -966,6 +1206,11 @@ module amr_utils
         ! Deallocate data for AMR cpu file
         deallocate(headl_cpu, taill_cpu, numbl_cpu, numbtot_cpu)
 !         deallocate(headb, tailb, numbb)
+        if (use_qdp) then
+            deallocate(bound_key_qdp)
+        else
+            deallocate(bound_key_dp)
+        end if
         deallocate(son_cpu)
         if (allocated(father_cpu)) deallocate(father_cpu)
         if (allocated(prev_cpu)) deallocate(prev_cpu)

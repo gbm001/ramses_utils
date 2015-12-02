@@ -64,6 +64,8 @@ module amr_utils
     logical :: keep_nbor=.TRUE.
     logical :: keep_xg=.TRUE.
     logical :: keep_u=.TRUE.
+    logical :: keep_phi=.TRUE.
+    logical :: keep_grav_f=.TRUE.
     ! Further extremely brief testing showed that making these parameters
     ! made no discernable difference; YMMV. Left as variables for easier
     ! python integration.
@@ -132,6 +134,7 @@ module amr_utils
     integer, allocatable :: flag1_cpu(:), cpu_map_cpu(:), nbor_cpu(:,:)
     
     real (kind=dp), allocatable :: xg_cpu(:,:), u_cpu(:,:)
+    real (kind=dp), allocatable :: phi_cpu(:), grav_f_cpu(:,:)
     
     ! Combined AMR tree data
     integer :: ngridmax, nlevelmax, tot_cells, free
@@ -146,6 +149,8 @@ module amr_utils
     real (kind=dp), allocatable :: xg(:,:)
     real (kind=dp), allocatable :: u(:,:,:)
     real (kind=dp), allocatable :: unscaled_u(:,:,:)
+    real (kind=dp), allocatable :: phi(:,:)
+    real (kind=dp), allocatable :: grav_f(:,:,:)
     
     contains
     
@@ -172,6 +177,16 @@ module amr_utils
         
         return
     end subroutine hydro_filename
+    
+    subroutine grav_filename(ioutput, icpu, filename)
+        ! Construct RAMSES-style AMR grav filename
+        integer, intent(in)                   :: ioutput, icpu
+        character (LEN=19), intent(out)       :: filename
+        
+        write(filename, '(A,I5.5,A,I5.5)') 'grav_', ioutput, '.out', icpu
+        
+        return
+    end subroutine grav_filename
     
     subroutine info_filename(ioutput, filename)
         ! Construct RAMSES-style info header filename
@@ -249,6 +264,9 @@ module amr_utils
         character (LEN=20)                 :: hydro_filename_aux
         character (LEN=:), allocatable     :: output_path
         
+        keep_phi = .FALSE.
+        keep_grav_f = .FALSE.
+        
         call output_dir(ioutput, output_path_aux)
         if (len(output_basedir) == 0) then
             output_path = output_path_aux // '/'
@@ -302,7 +320,7 @@ module amr_utils
                 call read_hydro(output_path//hydro_filename_aux, icpu)
             end if
             
-            call add_neighbours_hydro(icpu)
+            call add_neighbours_hydro_grav(icpu)
             call deallocate_amr()
             call deallocate_hydro()
         end do
@@ -912,6 +930,185 @@ module amr_utils
     
     end subroutine write_hydro
     
+    subroutine read_grav_header(filename, icpu)
+        ! Read header from RAMSES AMR grav cpu file
+        ! (calls read_grav_header_internal)
+        
+        character (LEN=*), intent(in)           :: filename
+        integer, intent(in)                     :: icpu
+        
+        integer                                 :: iunit
+        
+        iunit = 100000 + icpu
+        
+        open(unit=iunit, file=trim(filename), status='old', form='unformatted')
+        call read_grav_header_internal(iunit)
+        close(unit=iunit)
+        
+        return
+    end subroutine read_grav_header
+    
+    subroutine read_grav_header_internal(iunit)
+        ! Read header from RAMSES AMR grav cpu file
+        integer, intent(in)              :: iunit
+        
+        integer                          :: ncpu_temp, ndim_temp
+        integer                          :: nlevelmax_cpu_temp, nboundary_temp
+        
+        read(unit=iunit) ncpu_temp
+        if (ncpu /= ncpu_temp) stop "ncpu does not match!"
+        read(unit=iunit) ndim_temp
+        if (ndim /= ndim_temp) stop "ndim does not match!"
+        read(unit=iunit) nlevelmax_cpu_temp
+        if (nlevelmax_cpu /= nlevelmax_cpu_temp) stop "nlevelmax_cpu does not match!"
+        read(unit=iunit) nboundary_temp
+        if (nboundary /= nboundary_temp) stop "nlevelmax_cpu does not match!"
+        
+        return
+    end subroutine read_grav_header_internal
+    
+    subroutine write_grav_header_internal(iunit)
+        ! Write header to RAMSES AMR grav cpu file
+        integer, intent(in)              :: iunit
+        
+        write(unit=iunit) ncpu
+        write(unit=iunit) ndim
+        write(unit=iunit) nlevelmax_cpu
+        write(unit=iunit) nboundary
+        
+        return
+    end subroutine write_grav_header_internal
+    
+    subroutine read_grav(filename, icpu)
+        ! Read data from RAMSES AMR grav cpu file
+        character(LEN=*), intent(in)     :: filename
+        integer, intent(in)              :: icpu
+        
+        integer                          :: iunit
+        real (kind=dp), allocatable      :: xdp(:)
+        integer, allocatable             :: ind_grid(:)
+        integer                          :: i, ind, dir
+        integer                          :: ilevel, ibound
+        integer                          :: istart, iskip, igrid
+        integer                          :: ilevel_temp, ncache_temp
+        
+        iunit = 100000 + icpu
+        
+        if (.NOT. ((keep_phi .OR. keep_grav_f) .AND. keep_next)) then
+            stop "Cannot read grav data without keeping 'next' and &
+                 &either phi' or 'grav_f' data!"
+        end if
+        
+        open(unit=iunit, file=trim(filename), status='old', form='unformatted')
+        
+        call read_grav_header_internal(iunit)
+        
+        allocate(phi_cpu(1:ncell))
+        allocate(grav_f_cpu(1:ncell, 1:ndim))
+        
+        do ilevel=1,nlevelmax_cpu
+            do ibound=1,nboundary + ncpu
+                read(unit=iunit) ilevel_temp
+                if (ilevel_temp /= ilevel) stop "Inconsistent levels!"
+                read(unit=iunit) ncache_temp
+                if (ibound <= ncpu) then
+                    ncache = numbl_cpu(ibound, ilevel)
+                    istart = headl_cpu(ibound, ilevel)
+                else
+                    ncache = numbb(ibound - ncpu, ilevel)
+                    istart = headb(ibound - ncpu, ilevel)
+                end if
+                if (ncache_temp /= ncache) stop "Inconsistent ncache!"
+                if (ncache <= 0) cycle
+                allocate(ind_grid(1:ncache), xdp(1:ncache))
+                igrid = istart
+                do i=1,ncache
+                    ind_grid(i)=igrid
+                    igrid=next_cpu(igrid)
+                end do
+                do ind=1,twotondim
+                    iskip = ncoarse + (ind-1)*ngridmax_cpu
+                    read(unit=iunit) xdp
+                    do i=1,ncache
+                       phi_cpu(ind_grid(i)+iskip) = xdp(i)
+                    end do
+                    do dir=1,ndim
+                        read(unit=iunit) xdp
+                        do i=1,ncache
+                           grav_f_cpu(ind_grid(i)+iskip, dir) = xdp(i)
+                        end do
+                    end do
+                end do
+                deallocate(xdp, ind_grid)
+            end do
+        end do
+        
+        close(unit=iunit)
+    
+    end subroutine read_grav
+    
+    subroutine write_grav(filename, icpu)
+        ! Write data to RAMSES AMR grav cpu file
+        character(LEN=*), intent(in)     :: filename
+        integer, intent(in)              :: icpu
+        
+        integer                          :: iunit
+        real (kind=dp), allocatable      :: xdp(:)
+        integer, allocatable             :: ind_grid(:)
+        integer                          :: i, ind
+        integer                          :: ilevel, ibound, dir
+        integer                          :: istart, iskip, igrid
+        
+        iunit = 100000 + icpu
+        
+        if (.NOT. (keep_phi .AND. keep_grav_f .AND. keep_next)) then
+            stop "Cannot write grav data without keeping 'phi', 'f'&
+                 & and 'next' data!"
+        end if
+        
+        open(unit=iunit, file=trim(filename), status='unknown', form='unformatted')
+        
+        call write_grav_header_internal(iunit)
+        
+        do ilevel=1,nlevelmax_cpu
+            do ibound=1,nboundary + ncpu
+                if (ibound <= ncpu) then
+                    ncache = numbl_cpu(ibound, ilevel)
+                    istart = headl_cpu(ibound, ilevel)
+                else
+                    ncache = numbb(ibound - ncpu, ilevel)
+                    istart = headb(ibound - ncpu, ilevel)
+                end if
+                write(unit=iunit) ilevel
+                write(unit=iunit) ncache
+                if (ncache <= 0) cycle
+                allocate(ind_grid(1:ncache), xdp(1:ncache))
+                igrid = istart
+                do i=1,ncache
+                    ind_grid(i)=igrid
+                    igrid=next_cpu(igrid)
+                end do
+                do ind=1,twotondim
+                    iskip = ncoarse + (ind-1)*ngridmax_cpu
+                    do i=1,ncache
+                       xdp(i) = phi_cpu(ind_grid(i)+iskip)
+                    end do
+                    write(unit=iunit) xdp
+                    do dir=1,ndim
+                        do i=1,ncache
+                           xdp(i) = grav_f_cpu(ind_grid(i)+iskip, dir)
+                        end do
+                        write(unit=iunit) xdp
+                    end do
+                end do
+                deallocate(xdp, ind_grid)
+            end do
+        end do
+        
+        close(unit=iunit)
+    
+    end subroutine write_grav
+    
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! File input/output routines (combined tree)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -923,16 +1120,17 @@ module amr_utils
         ! 2) Header of scalar variables
         ! 3) headl, taill and numbl (for use with next/prev)
         ! 4) some of: son, father, next, prev, level, flag1, cpu_map,
-        !    nbor, xg, u
+        !    nbor, xg, u, phi, grav_f
         character (LEN=*), intent(in)        :: filename
         integer                              :: maxout_in, maxlevel_in
         integer                              :: sp_in, dp_in, qdp_in
         integer                              :: min_ivar_in, max_ivar_in, ivar
         
         integer                              :: cur_pos, data_iosize
-        integer                              :: logicals(10)
+        integer                              :: logicals(20)
         logical :: file_son, file_father, file_next, file_prev, file_level
         logical :: file_flag1, file_cpu_map, file_nbor, file_xg, file_u
+        logical :: file_phi, file_grav_f
         
         open(unit=50, file=trim(filename),&
             &status='old', access='stream')
@@ -950,6 +1148,8 @@ module amr_utils
         file_nbor = (logicals(8) == 1)
         file_xg = (logicals(9) == 1)
         file_u = (logicals(10) == 1)
+        file_phi = (logicals(11) == 1)
+        file_grav_f = (logicals(12) == 1)
         
         read (50) min_ivar_in, max_ivar_in
         ! Verify we have the data we want
@@ -991,6 +1191,10 @@ module amr_utils
                 write(6,*) "WARNING - file has no 'u'!"
             end if
         end if
+        if ((.NOT. file_phi) .AND. keep_phi) &
+            &write(6,*) "WARNING - file has no 'phi'!"
+        if ((.NOT. file_grav_f) .AND. keep_grav_f) &
+            &write(6,*) "WARNING - file has no 'grav_f'!"
         
         read (50) ndim, maxout_in, maxlevel_in, sp_in, dp_in, qdp_in, nvar
         if (maxout_in /= maxout) stop "Wrong maxout!"
@@ -1097,6 +1301,24 @@ module amr_utils
                 end do
             end if
         end if
+        if (file_phi) then
+            if (keep_phi) then
+                read (50) phi
+            else
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax * twotondim
+                read (50, pos=cur_pos+data_iosize)
+            end if
+        end if
+        if (file_grav_f) then
+            if (keep_grav_f) then
+                read (50) grav_f
+            else
+                inquire(unit=50, pos=cur_pos)
+                data_iosize = dp_iosize * ngridmax * ndim * twotondim
+                read (50, pos=cur_pos+data_iosize)
+            end if
+        end if
         
         close(50)
         
@@ -1110,10 +1332,10 @@ module amr_utils
         ! 2) Header of scalar variables
         ! 3) headl, taill and numbl (for use with next/prev)
         ! 4) some of: son, father, next, prev, level, flag1, cpu_map,
-        !    nbor, xg, u
+        !    nbor, xg, u, phi, grav_f
         integer                              :: ivar
         character (LEN=*), intent(in)        :: filename
-        integer                              :: logicals(10)
+        integer                              :: logicals(20)
         
         open(unit=50, file=trim(filename),&
             &status='replace', access='stream')
@@ -1131,6 +1353,8 @@ module amr_utils
         if (keep_nbor) logicals(8) = 1
         if (keep_xg) logicals(9) = 1
         if (keep_u) logicals(10) = 1
+        if (keep_phi) logicals(11) = 1
+        if (keep_grav_f) logicals(12) = 1
         write (50) logicals
         
         write (50) ivar_min_use, ivar_max_use
@@ -1156,6 +1380,8 @@ module amr_utils
                 write (50) u(:, :, ivar)
             end do
         end if
+        if (keep_phi) write (50) phi
+        if (keep_grav_f) write (50) grav_f
         
         close(50)
         
@@ -1230,6 +1456,14 @@ module amr_utils
         return
     end subroutine deallocate_hydro
     
+    subroutine deallocate_grav()
+        ! Deallocate grav data for AMR grav cpu file
+        if (allocated(phi_cpu)) deallocate(phi_cpu)
+        if (allocated(grav_f_cpu)) deallocate(grav_f_cpu)
+    
+        return
+    end subroutine deallocate_grav
+    
     subroutine allocate_combined(nlevelmax_in,&
                                 &ngrid_current_in, tot_cells_in)
         ! Allocate combined AMR tree
@@ -1272,6 +1506,9 @@ module amr_utils
         if (keep_u) allocate(u(1:ngridmax, 1:twotondim,&
                             &ivar_min_use:ivar_max_use))
         
+        if (keep_phi) allocate(phi(1:ngridmax, 1:twotondim))
+        if (keep_grav_f) allocate(grav_f(1:ngridmax, 1:twotondim, 1:ndim))
+        
         if (nlevelmax_in == 0 .AND. ngrid_current_in == 0) return
         
         allocate(translation_table(1:ngrid_current_in))
@@ -1306,6 +1543,8 @@ module amr_utils
         if (allocated(nbor)) deallocate(nbor)
         if (allocated(xg)) deallocate(xg)
         if (allocated(u)) deallocate(u)
+        if (allocated(phi)) deallocate(phi)
+        if (allocated(grav_f)) deallocate(grav_f)
         
         if (allocated(translation_table)) deallocate(translation_table)
         if (allocated(translation_tables)) deallocate(translation_tables)
@@ -1493,10 +1732,10 @@ module amr_utils
         return
     end subroutine add_tree
     
-    subroutine add_neighbours_hydro(icpu)
+    subroutine add_neighbours_hydro_grav(icpu)
         ! Add neighbour information to the combined tree already built
         ! using the translation tables stored earlier
-        ! Also add hydro information using translation tables
+        ! Also add hydro and grav information using translation tables
         integer, intent(in)        :: icpu
         
         integer                    :: ilevel, ivar, i, dir, ind, iskip
@@ -1505,8 +1744,9 @@ module amr_utils
         
         call load_translation_table(icpu)
         
-        if (.NOT. (keep_nbor .OR. keep_u)) then
-            stop "Cannot add_neighbours_hydro without 'nbor' and/or 'u' data!"
+        if (.NOT. (keep_nbor .OR. keep_u .OR. keep_phi .OR. keep_grav_f)) then
+            stop "Cannot add_neighbours_hydro without 'nbor', 'u',&
+                 &'phi' or 'grav_f' data!"
         end if
         
         if (min_ivar == 0) then
@@ -1538,6 +1778,22 @@ module amr_utils
             end do
         end if
         
+        if (keep_phi) then
+            do ind=1,twotondim
+                iskip = ncoarse + (ind-1)*ngridmax_cpu
+                phi(1, ind) = phi_cpu(iskip + 1)
+            end do
+        end if
+        
+        if (keep_grav_f) then
+            do dir=1,ndim
+                do ind=1,twotondim
+                    iskip = ncoarse + (ind-1)*ngridmax_cpu
+                    grav_f(1, ind, dir) = grav_f_cpu(iskip + 1, dir)
+                end do
+            end do
+        end if
+        
         do ilevel=2, nlevelmax_cpu
             ncache = numbl_cpu(icpu, ilevel)
             ! First do the hydro part
@@ -1549,6 +1805,32 @@ module amr_utils
                         do ind=1,twotondim
                             iskip = ncoarse + (ind-1)*ngridmax_cpu
                             u(newid, ind, ivar) = u_cpu(iskip + igrid, ivar)
+                        end do
+                    end do
+                    igrid = next_cpu(igrid)
+                end do
+            end if
+            ! Then do the grav part
+            if (keep_phi) then
+                igrid = headl_cpu(icpu, ilevel)
+                do i=1,ncache
+                    newid = translation_table(igrid)
+                    do ind=1,twotondim
+                        iskip = ncoarse + (ind-1)*ngridmax_cpu
+                        phi(newid, ind) = phi_cpu(iskip + igrid)
+                    end do
+                    igrid = next_cpu(igrid)
+                end do
+            end if
+            if (keep_grav_f) then
+                igrid = headl_cpu(icpu, ilevel)
+                do i=1,ncache
+                    newid = translation_table(igrid)
+                    do dir=1,ndim
+                        do ind=1,twotondim
+                            iskip = ncoarse + (ind-1)*ngridmax_cpu
+                            grav_f(newid, ind, dir) = &
+                                &grav_f_cpu(iskip + igrid, dir)
                         end do
                     end do
                     igrid = next_cpu(igrid)
@@ -1583,7 +1865,7 @@ module amr_utils
         end do
         
         return
-    end subroutine add_neighbours_hydro
+    end subroutine add_neighbours_hydro_grav
     
     function new_grid(ilevel)
         ! Add a new cell to the combined tree on level ilevel

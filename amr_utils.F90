@@ -879,8 +879,6 @@ module amr_utils
         
         do ilevel=1,nlevelmax_cpu
             do ibound=1,nboundary + ncpu
-                write(unit=iunit) ilevel
-                write(unit=iunit) ncache
                 if (ibound <= ncpu) then
                     ncache = numbl_cpu(ibound, ilevel)
                     istart = headl_cpu(ibound, ilevel)
@@ -888,6 +886,8 @@ module amr_utils
                     ncache = numbb(ibound - ncpu, ilevel)
                     istart = headb(ibound - ncpu, ilevel)
                 end if
+                write(unit=iunit) ilevel
+                write(unit=iunit) ncache
                 if (ncache <= 0) cycle
                 allocate(ind_grid(1:ncache), xdp(1:ncache))
                 igrid = istart

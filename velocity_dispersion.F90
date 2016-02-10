@@ -319,9 +319,9 @@ program velocity_dispersion
     extra = ""
     if (outputs == 3) extra = '_h'
     if (suffix == "") then
-        output_filename = "vel"//trim(extra)//"_stats_.dat"
+        output_filename = "vel_stats"//trim(extra)//"_.dat"
     else
-        output_filename = "vel"//trim(extra)//"_stats_"//suffix//".dat"
+        output_filename = "vel_stats"//trim(extra)//"_"//suffix//".dat"
     end if
 
     open(1, file=output_filename)

@@ -34,12 +34,14 @@ for i, output_choice in enumerate(output_choices):
         string_data = f.readlines()
     current_line_block = []
     for line in string_data:
-        if line == '\n':
+        if line.strip():
+            current_line_block.append(line)
+        else:
             if current_line_block:
                 line_blocks.append(current_line_block)
             current_line_block = []
-        else:
-            current_line_block.append(line)
+    if current_line_block:
+        line_blocks.append(current_line_block)
 
     # Read block of text into numpy array
     for line_block in line_blocks:

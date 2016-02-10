@@ -180,7 +180,7 @@ program velocity_dispersion
     
     cmd_args = command_argument_count()
     if (cmd_args < 1 .OR. cmd_args > 2) then
-        write (6,*) "Wrong number of command line arguments (expecting 2)!"
+        write (6,*) "Wrong number of command line arguments (expecting 1 or 2)!"
         write (6,*) "First argument: filename of combined output file"
         write (6,*) "Optional second argument: filename of Helmholtz decomposition file"
         write (6,*) "If using Helmholtz file, all velocities in centre-of-velocity frame"

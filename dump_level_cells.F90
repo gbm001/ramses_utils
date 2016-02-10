@@ -86,8 +86,9 @@ program dump_level_cells_program
     dump_cells = huge(0.0d0)
     
     ! Load data
-    call dump_level_cells(select_level, select_ivar_min,&
-                         &select_ivar_max, dump_cells, leaf_only=.TRUE.)
+    call dump_level_cells(&
+        &select_level, u(:,:,select_ivar_min:select_ivar_max),&
+        &dump_cells, leaf_only=.TRUE.)
     
     suffix = get_single_suffix(input_filename)
     

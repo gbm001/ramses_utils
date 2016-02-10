@@ -1899,15 +1899,14 @@ module amr_utils
     ! Data retrieval routines
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    subroutine dump_level_cells(level_in, iv_min, iv_max, &
-                               &dump_cells, leaf_only)
+    subroutine dump_level_cells(level_in, source, dump_cells, leaf_only)
         ! Scan through all the grids on level level_in. Scan all the hydro
         ! quantities for their cells between columns ivar_min_in and
         ! ivar_max_in. Store these in the flat grid dump_grid. Leave gaps from
         ! AMR unchanged. If leaf_only, only change the value if the cell
         ! is a leaf cell.
         integer, intent(in)               :: level_in
-        integer, intent(in)               :: iv_min, iv_max
+        double precision, intent(in)      :: source(:,:,:)
         double precision, intent(inout)   :: dump_cells(:,:,:,:)
         logical, intent(in), optional     :: leaf_only
         
@@ -1930,12 +1929,8 @@ module amr_utils
             end if
         end if
         
-        if (.NOT. (keep_next .AND. keep_xg .AND. keep_u)) then
-            stop "Cannot dump_level_cells without 'next', 'xg' and 'u' data!"
-        end if
-        
-        if ((iv_min < min_ivar) .OR. (iv_max > max_ivar)) then
-            stop "Requested hydro columns outside of those in file!"
+        if (.NOT. (keep_next .AND. keep_xg)) then
+            stop "Cannot dump_level_cells without 'next' and 'xg' data!"
         end if
         
         ! We will identify the position of the grids (each with 2/4/8 cells)
@@ -1954,45 +1949,45 @@ module amr_utils
             if (use_leaf_only) then
                 lt(1:twotondim) = (son(igrid, 1:twotondim) == 0)
                 if (ndim==3) then
-                    if (lt(1)) dump_cells(2*gx-1, 2*gy-1, 2*gz-1, :) = u(igrid, 1, iv_min:iv_max)
-                    if (lt(2)) dump_cells(2*gx  , 2*gy-1, 2*gz-1, :) = u(igrid, 2, iv_min:iv_max)
-                    if (lt(3)) dump_cells(2*gx-1, 2*gy  , 2*gz-1, :) = u(igrid, 3, iv_min:iv_max)
-                    if (lt(4)) dump_cells(2*gx  , 2*gy  , 2*gz-1, :) = u(igrid, 4, iv_min:iv_max)
-                    if (lt(5)) dump_cells(2*gx-1, 2*gy-1, 2*gz  , :) = u(igrid, 5, iv_min:iv_max)
-                    if (lt(6)) dump_cells(2*gx  , 2*gy-1, 2*gz  , :) = u(igrid, 6, iv_min:iv_max)
-                    if (lt(7)) dump_cells(2*gx-1, 2*gy  , 2*gz  , :) = u(igrid, 7, iv_min:iv_max)
-                    if (lt(8)) dump_cells(2*gx  , 2*gy  , 2*gz  , :) = u(igrid, 8, iv_min:iv_max)
+                    if (lt(1)) dump_cells(2*gx-1, 2*gy-1, 2*gz-1, :) = source(igrid, 1, :)
+                    if (lt(2)) dump_cells(2*gx  , 2*gy-1, 2*gz-1, :) = source(igrid, 2, :)
+                    if (lt(3)) dump_cells(2*gx-1, 2*gy  , 2*gz-1, :) = source(igrid, 3, :)
+                    if (lt(4)) dump_cells(2*gx  , 2*gy  , 2*gz-1, :) = source(igrid, 4, :)
+                    if (lt(5)) dump_cells(2*gx-1, 2*gy-1, 2*gz  , :) = source(igrid, 5, :)
+                    if (lt(6)) dump_cells(2*gx  , 2*gy-1, 2*gz  , :) = source(igrid, 6, :)
+                    if (lt(7)) dump_cells(2*gx-1, 2*gy  , 2*gz  , :) = source(igrid, 7, :)
+                    if (lt(8)) dump_cells(2*gx  , 2*gy  , 2*gz  , :) = source(igrid, 8, :)
                 
                 else if (ndim==2) then
-                    if (lt(1)) dump_cells(1, 2*gx-1, 2*gy-1, :) = u(igrid, 1, iv_min:iv_max)
-                    if (lt(2)) dump_cells(1, 2*gx  , 2*gy-1, :) = u(igrid, 2, iv_min:iv_max)
-                    if (lt(3)) dump_cells(1, 2*gx-1, 2*gy  , :) = u(igrid, 3, iv_min:iv_max)
-                    if (lt(4)) dump_cells(1, 2*gx  , 2*gy  , :) = u(igrid, 4, iv_min:iv_max)
+                    if (lt(1)) dump_cells(1, 2*gx-1, 2*gy-1, :) = source(igrid, 1, :)
+                    if (lt(2)) dump_cells(1, 2*gx  , 2*gy-1, :) = source(igrid, 2, :)
+                    if (lt(3)) dump_cells(1, 2*gx-1, 2*gy  , :) = source(igrid, 3, :)
+                    if (lt(4)) dump_cells(1, 2*gx  , 2*gy  , :) = source(igrid, 4, :)
                 
                 else
-                    if (lt(1)) dump_cells(1, 1, 2*gx-1, :) = u(igrid, 1, iv_min:iv_max)
-                    if (lt(2)) dump_cells(1, 1, 2*gx  , :) = u(igrid, 2, iv_min:iv_max)
+                    if (lt(1)) dump_cells(1, 1, 2*gx-1, :) = source(igrid, 1, :)
+                    if (lt(2)) dump_cells(1, 1, 2*gx  , :) = source(igrid, 2, :)
                 end if
             else
                 if (ndim==3) then
-                    dump_cells(2*gx-1, 2*gy-1, 2*gz-1, :) = u(igrid, 1, iv_min:iv_max)
-                    dump_cells(2*gx  , 2*gy-1, 2*gz-1, :) = u(igrid, 2, iv_min:iv_max)
-                    dump_cells(2*gx-1, 2*gy  , 2*gz-1, :) = u(igrid, 3, iv_min:iv_max)
-                    dump_cells(2*gx  , 2*gy  , 2*gz-1, :) = u(igrid, 4, iv_min:iv_max)
-                    dump_cells(2*gx-1, 2*gy-1, 2*gz  , :) = u(igrid, 5, iv_min:iv_max)
-                    dump_cells(2*gx  , 2*gy-1, 2*gz  , :) = u(igrid, 6, iv_min:iv_max)
-                    dump_cells(2*gx-1, 2*gy  , 2*gz  , :) = u(igrid, 7, iv_min:iv_max)
-                    dump_cells(2*gx  , 2*gy  , 2*gz  , :) = u(igrid, 8, iv_min:iv_max)
+                    dump_cells(2*gx-1, 2*gy-1, 2*gz-1, :) = source(igrid, 1, :)
+                    dump_cells(2*gx  , 2*gy-1, 2*gz-1, :) = source(igrid, 2, :)
+                    dump_cells(2*gx-1, 2*gy  , 2*gz-1, :) = source(igrid, 3, :)
+                    dump_cells(2*gx  , 2*gy  , 2*gz-1, :) = source(igrid, 4, :)
+                    dump_cells(2*gx-1, 2*gy-1, 2*gz  , :) = source(igrid, 5, :)
+                    dump_cells(2*gx  , 2*gy-1, 2*gz  , :) = source(igrid, 6, :)
+                    dump_cells(2*gx-1, 2*gy  , 2*gz  , :) = source(igrid, 7, :)
+                    dump_cells(2*gx  , 2*gy  , 2*gz  , :) = source(igrid, 8, :)
                 
                 else if (ndim==2) then
-                    dump_cells(1, 2*gx-1, 2*gy-1, :) = u(igrid, 1, iv_min:iv_max)
-                    dump_cells(1, 2*gx  , 2*gy-1, :) = u(igrid, 2, iv_min:iv_max)
-                    dump_cells(1, 2*gx-1, 2*gy  , :) = u(igrid, 3, iv_min:iv_max)
-                    dump_cells(1, 2*gx  , 2*gy  , :) = u(igrid, 4, iv_min:iv_max)
+                    dump_cells(1, 2*gx-1, 2*gy-1, :) = source(igrid, 1, :)
+                    dump_cells(1, 2*gx  , 2*gy-1, :) = source(igrid, 2, :)
+                    dump_cells(1, 2*gx-1, 2*gy  , :) = source(igrid, 3, :)
+                    dump_cells(1, 2*gx  , 2*gy  , :) = source(igrid, 3, :)
                 
                 else
-                    dump_cells(1, 1, 2*gx-1, :) = u(igrid, 1, iv_min:iv_max)
-                    dump_cells(1, 1, 2*gx  , :) = u(igrid, 2, iv_min:iv_max)
+                    dump_cells(1, 1, 2*gx-1, :) = source(igrid, 1, :)
+                    dump_cells(1, 1, 2*gx  , :) = source(igrid, 2, :)
                 end if
             end if
             

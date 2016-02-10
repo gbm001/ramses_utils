@@ -20,12 +20,12 @@ program power_spectrum_program
     integer                        :: N, Nbins
     integer                        :: max_level, max_grids
     integer                        :: gmin, gmax
-    double precision, allocatable :: dump_cells(:,:,:,:)
+    double precision, allocatable  :: dump_cells(:,:,:,:)
     double precision, allocatable  :: vmag(:,:,:,:)
     complex(kind=cdp), allocatable :: vfft(:,:,:)
-    double precision, allocatable  :: power1D(:,:)
-    double precision, allocatable  :: power2D(:,:,:)
-    double precision, allocatable  :: power3D(:,:,:,:)
+    double precision, allocatable  :: power1D(:)
+    double precision, allocatable  :: power2D(:,:)
+    double precision, allocatable  :: power3D(:,:,:)
     double precision, allocatable  :: bin_avg(:,:), bin_centres(:,:)
     double precision, allocatable  :: tr_bin_avg(:,:)
     integer, allocatable           :: counts(:,:)
@@ -123,17 +123,17 @@ program power_spectrum_program
          allocate(dump_cells(1:1, 1:1, 1:N, 2:4))
          allocate(vmag(1:1, 1:1, 1:N, 1:outputs))
          allocate(vfft(1:1, 1:1, 1:N))
-         allocate(power1D(gmin:gmax, 1:outputs))
+         allocate(power1D(gmin:gmax))
     else if (ndim==2) then
          allocate(dump_cells(1:1, 1:N, 1:N, 2:4))
          allocate(vmag(1:1, 1:N, 1:N, 1:outputs))
          allocate(vfft(1:1, 1:N, 1:N))
-         allocate(power2D(gmin:gmax, gmin:gmax, 1:outputs))
+         allocate(power2D(gmin:gmax, gmin:gmax))
     else if (ndim==3) then
          allocate(dump_cells(1:N, 1:N, 1:N, 2:4))
          allocate(vmag(1:N, 1:N, 1:N, 1:outputs))
          allocate(vfft(1:N, 1:N, 1:N))
-         allocate(power3D(gmin:gmax, gmin:gmax, gmin:gmax, 1:outputs))
+         allocate(power3D(gmin:gmax, gmin:gmax, gmin:gmax))
     else
         stop 'ndim must be 1, 2 or 3?'
     end if
@@ -175,7 +175,7 @@ program power_spectrum_program
                 vmag(1,1,k,ioutput) = vmag(1,1,k,ioutput) * (-1)**(k-1)
             end do
             call DFT_1D(vmag(1,1,:,ioutput), vfft(1,1,:), N)
-            power1D(:,ioutput) = reshape(dble(vfft * conjg(vfft)), (/N/))
+            power1D = reshape(dble(vfft * conjg(vfft)), (/N/))
         else if (ndim==2) then
             do k=1,N
                 do j=1,N
@@ -183,7 +183,7 @@ program power_spectrum_program
                 end do
             end do
             call DFT_2D(vmag(1,:,:,ioutput), vfft(1,:,:), N)
-            power2D(:,:,ioutput) = reshape(dble(vfft * conjg(vfft)), (/N,N/))
+            power2D = reshape(dble(vfft * conjg(vfft)), (/N,N/))
         else if (ndim==3) then
             do k=1,N
                 do j=1,N
@@ -193,21 +193,21 @@ program power_spectrum_program
                 end do
             end do
             call DFT_3D(vmag(:,:,:,ioutput), vfft, N)
-            power3D(:,:,:,ioutput) = dble(vfft * conjg(vfft))
+            power3D = dble(vfft * conjg(vfft))
             
         else
             stop 'ndim /= 1,2 or 3!'
         end if
         
         if (ndim==1) then
-            call square_binning(power1D(:,ioutput), Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
-            call triangle_binning(power1D(:,ioutput), Nbins, tr_bin_avg(:,ioutput))
+            call square_binning(power1D, Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
+            call triangle_binning(power1D, Nbins, tr_bin_avg(:,ioutput))
         else if (ndim==2) then
-            call square_binning(power2D(:,:,ioutput), Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
-            call triangle_binning(power2D(:,:,ioutput), Nbins, tr_bin_avg(:,ioutput))
+            call square_binning(power2D, Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
+            call triangle_binning(power2D, Nbins, tr_bin_avg(:,ioutput))
         else if (ndim==3) then
-            call square_binning(power3D(:,:,:,ioutput), Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
-            call triangle_binning(power3D(:,:,:,ioutput), Nbins, tr_bin_avg(:,ioutput))
+            call square_binning(power3D, Nbins, counts(:,ioutput), bin_avg(:,ioutput), bin_centres(:,ioutput))
+            call triangle_binning(power3D, Nbins, tr_bin_avg(:,ioutput))
         else
             stop 'ndim /= 1,2 or 3!'
         end if

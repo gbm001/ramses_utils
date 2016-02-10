@@ -1,4 +1,9 @@
 module binning
+    ! This module does binning
+    ! It must be passed ALLOCATABLE arrays
+    ! Binning occurs along the array axes which ARE preserved
+    ! i.e. pass an array of shape (-31:32) and binning happens over
+    ! the range -31:32 (roughly)
     implicit none
 
     interface square_binning
@@ -18,8 +23,8 @@ module binning
     contains
     
     subroutine d_square_binning(x, y, Nbins, counts, bin_avg, bin_centres)
-        double precision, intent(in)  :: x(:)
-        double precision, intent(in)  :: y(:)
+        double precision, allocatable, intent(in)  :: x(:)
+        double precision, allocatable, intent(in)  :: y(:)
         integer, intent(in)           :: Nbins
         
         integer, intent(out)          :: counts(0:Nbins)
@@ -51,7 +56,7 @@ module binning
     end subroutine d_square_binning
     
     subroutine d_square_binning1D(y, Nbins, counts, bin_avg, bin_centres)
-        double precision, intent(in) :: y(:)
+        double precision, allocatable, intent(in) :: y(:)
         integer, intent(in)           :: Nbins
         
         integer, intent(out)          :: counts(0:Nbins)
@@ -84,7 +89,7 @@ module binning
     end subroutine d_square_binning1D
     
     subroutine d_square_binning2D(y, Nbins, counts, bin_avg, bin_centres)
-        double precision, intent(in)  :: y(:,:)
+        double precision, allocatable, intent(in) :: y(:,:)
         integer, intent(in)           :: Nbins
         
         integer, intent(out)          :: counts(0:Nbins)
@@ -122,7 +127,7 @@ module binning
     end subroutine d_square_binning2D
     
     subroutine d_square_binning3D(y, Nbins, counts, bin_avg, bin_centres)
-        double precision, intent(in)  :: y(:,:,:)
+        double precision, allocatable, intent(in) :: y(:,:,:)
         integer, intent(in)           :: Nbins
         
         integer, intent(out)          :: counts(0:Nbins)
@@ -163,8 +168,8 @@ module binning
     end subroutine d_square_binning3D
     
     subroutine d_triangle_binning(x, y, Nbins, bin_avg)
-        double precision, intent(in)  :: x(:)
-        double precision, intent(in)  :: y(:)
+        double precision, allocatable, intent(in)  :: x(:)
+        double precision, allocatable, intent(in)  :: y(:)
         integer, intent(in)           :: Nbins
         
         double precision, intent(out) :: bin_avg(0:Nbins)
@@ -201,7 +206,7 @@ module binning
     end subroutine d_triangle_binning
     
     subroutine d_triangle_binning1D(y, Nbins, bin_avg)
-        double precision, intent(in)  :: y(:)
+        double precision, allocatable, intent(in)  :: y(:)
         integer, intent(in)           :: Nbins
         
         double precision, intent(out) :: bin_avg(0:Nbins)
@@ -239,7 +244,7 @@ module binning
     end subroutine d_triangle_binning1D
     
     subroutine d_triangle_binning2D(y, Nbins, bin_avg)
-        double precision, intent(in)  :: y(:,:)
+        double precision, allocatable, intent(in)  :: y(:,:)
         integer, intent(in)           :: Nbins
         
         double precision, intent(out) :: bin_avg(0:Nbins)
@@ -284,7 +289,7 @@ module binning
     end subroutine d_triangle_binning2D
     
     subroutine d_triangle_binning3D(y, Nbins, bin_avg)
-        double precision, intent(in)  :: y(:,:,:)
+        double precision, allocatable, intent(in)  :: y(:,:,:)
         integer, intent(in)           :: Nbins
         
         double precision, intent(out) :: bin_avg(0:Nbins)

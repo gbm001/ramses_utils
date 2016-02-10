@@ -1,12 +1,7 @@
-module fft
-   implicit none
-#include "fftw3.f"
-
-end module fft
-
 program power_spectrum_program
     use amr_utils
     use binning
+    use fftw_module
     implicit none
     
 !     double precision, parameter    :: pc=3.0856776d+18      ! pc in cm
@@ -21,7 +16,7 @@ program power_spectrum_program
     integer                        :: select_level
     
     integer                        :: i, j, k, ilevel
-    integer                        :: N, Nbins, shift
+    integer                        :: N, Nbins
     integer                        :: max_level, max_grids
     integer                        :: gmin, gmax
     double precision, allocatable  :: dump_cells(:,:,:,:)
@@ -118,26 +113,23 @@ program power_spectrum_program
     
     vmag = sqrt(sum(dump_cells(:, :, :, 2:4)**2, dim=ndim+1))
     
-    shift = N / 2
-    
-    ! Note magic input-array change so we don't need to shift later...
+    ! Note magic sign-flipping change in image domain
+    ! so we don't need to shift later... (only works for even domains)
+    ! http://dsp.stackexchange.com/questions/9039/centering-zero-frequency-for-discrete-fourier-transform
     if (ndim==1) then
         do k=1,N
             vmag(1,1,k) = vmag(1,1,k) * (-1)**(k-1)
         end do
-        call FFT_1D(vmag(1,1,:), vfft(1,1,:), N)
+        call DFT_1D(vmag(1,1,:), vfft(1,1,:), N)
         power1D = reshape(dble(vfft * conjg(vfft)), (/N/))
-!         power1D = cshift(power1D, -shift)
     else if (ndim==2) then
         do k=1,N
             do j=1,N
                 vmag(1,j,k) = vmag(1,j,k) * (-1)**(j+k)
             end do
         end do
-        call FFT_2D(vmag(1,:,:), vfft(1,:,:), N)
+        call DFT_2D(vmag(1,:,:), vfft(1,:,:), N)
         power2D = reshape(dble(vfft * conjg(vfft)), (/N,N/))
-!         power2D = cshift(power2D, -shift, 1)
-!         power2D = cshift(power2D, -shift, 2)
     else if (ndim==3) then
         do k=1,N
             do j=1,N
@@ -146,11 +138,8 @@ program power_spectrum_program
                 end do
             end do
         end do
-        call FFT_3D(vmag, vfft, N)
+        call DFT_3D(vmag, vfft, N)
         power3D = dble(vfft * conjg(vfft))
-!         power3D = cshift(power3D, -shift, 1)
-!         power3D = cshift(power3D, -shift, 2)
-!         power3D = cshift(power3D, -shift, 3)
         
     else
         stop 'ndim /= 1,2 or 3!'
@@ -196,89 +185,5 @@ program power_spectrum_program
     close(10)
     
     stop
-    
-    contains
-    
-    subroutine FFT_1D(real_field, complex_field, N)
-       use fft
-       implicit none
-       ! Transform purely real field into complex field
-
-       integer, intent(in)            :: N     ! Size of grid
-       real(kind=dp), intent(in)      :: real_field(0:N-1)
-                                               ! Scalar field
-       complex(kind=cdp), intent(out) :: complex_field(0:N-1)
-                                               ! Complex field output
-       
-       integer (kind=i8b)             :: plan  ! FFTW plan pointer
-
-       call dfftw_plan_dft_1d(plan, N, complex_field, &
-          & complex_field, FFTW_FORWARD, FFTW_ESTIMATE)
-
-       complex_field = cmplx(real_field, kind=cdp)
-
-       !write (6,*) "Performing FFT..."
-
-       call dfftw_execute_dft(plan, complex_field, complex_field)
-       complex_field = complex_field / real(N, dp)
-       
-       call dfftw_destroy_plan(plan)
-       
-       return
-    end subroutine FFT_1D
-
-    subroutine FFT_2D(real_field, complex_field, N)
-       use fft
-       implicit none
-       ! Transform purely real field into complex field
-
-       integer, intent(in)            :: N     ! Size of grid
-       real(kind=dp), intent(in)      :: real_field(0:N-1, 0:N-1)
-                                               ! Scalar field
-       complex(kind=cdp), intent(out) :: complex_field(0:N-1, 0:N-1)
-                                               ! Complex field output
-       
-       integer (kind=i8b)             :: plan  ! FFTW plan pointer
-
-       call dfftw_plan_dft_2d(plan, N, N, complex_field, &
-          & complex_field, FFTW_FORWARD, FFTW_ESTIMATE)
-
-       complex_field = cmplx(real_field, kind=cdp)
-
-       !write (6,*) "Performing FFT..."
-       call dfftw_execute_dft(plan, complex_field, complex_field)
-       complex_field = complex_field / real(N**2, dp)
-   
-       call dfftw_destroy_plan(plan)
-
-       return
-    end subroutine FFT_2D
-
-    subroutine FFT_3D(real_field, complex_field, N)
-       use fft
-       implicit none
-       ! Transform purely real field into complex field
-
-       integer, intent(in)            :: N     ! Size of grid
-       real(kind=dp), intent(in)      :: real_field(0:N-1, 0:N-1, 0:N-1)
-                                               ! Scalar field
-       complex(kind=cdp), intent(out) :: complex_field(0:N-1, 0:N-1, 0:N-1)
-                                               ! Complex field output
-       
-       integer (kind=i8b)             :: plan  ! FFTW plan pointer
-       
-       call dfftw_plan_dft_3d(plan, N, N, N, complex_field, &
-          & complex_field, FFTW_FORWARD, FFTW_ESTIMATE)
-
-       complex_field = cmplx(real_field, kind=cdp)
-
-       !write (6,*) "Performing FFT..."
-       call dfftw_execute_dft(plan, complex_field, complex_field)
-       complex_field = complex_field / real(N**3, dp)
-   
-       call dfftw_destroy_plan(plan)
-
-       return
-    end subroutine FFT_3D
 
 end program power_spectrum_program

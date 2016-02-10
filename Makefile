@@ -8,12 +8,12 @@ DEBUG          = 2         # Either 0, 1 or 2
 OPT            = FAST      # Either 0, 1, 2, 3 or FAST
 OPENMP         = 0         # Either 0 or 1
 MPI            = 0         # Either 0 or 1
-FFT_TOOLS      = 0         # Either 0 or 1
+FFT_TOOLS      = 1         # Either 0 or 1
 
 # List of executables to be built within the package
 PROGRAMS = amr_utils.o convert_to_single dump_level_cells velocity_dispersion \
            rms_vel_3d reduce_nlevelmax
-FFT_PROGRAMS = power_spectrum
+FFT_PROGRAMS = power_spectrum helmholtz_decomposition
 TEST_PROGRAMS = test_binning
 
 # Compilation directories

@@ -96,7 +96,7 @@ module quickselect_mod
         
         N = size(array)
         
-        if (N==0) stop 'Array must be longer than 0!'
+        if (N==0) return
         
         if (mod(N,2) == 0) then
             ! Even number, run quickselect twice

@@ -8,6 +8,7 @@ program reduce_nlevelmax_program
     integer                        :: length
     integer                        :: new_nvar
     integer                        :: old_nvar
+    logical                        :: set_grav_form
 
     integer                        :: icpu
     character (LEN=12)             :: output_path_aux
@@ -23,7 +24,7 @@ program reduce_nlevelmax_program
         write (6,*) "First argument: directory containing RAMSES outputs"
         write (6,*) "Second argument: output number of desired output"
         write (6,*) "Third argument: directory to put new RAMSES output"
-        write (6,*) "Fourth argument: new nvar"
+        write (6,*) "Fourth argument: new nvar. If negative, new gravity format."
         stop 1
     end if
 
@@ -42,6 +43,9 @@ program reduce_nlevelmax_program
     call get_command_argument(4, integer_str)
     read(integer_str, *) new_nvar
     deallocate(integer_str)
+    
+    set_grav_form = (new_nvar < 0)
+    if (set_grav_form) new_nvar = -new_nvar
 
     call output_dir(ioutput, output_path_aux)
     if (len(output_basedir) == 0) then
@@ -72,12 +76,12 @@ program reduce_nlevelmax_program
         old_nvar = nvar
         nvar = new_nvar
         ivar_max_use = nvar
+        if (set_grav_form) grav_form = 1
         
         allocate(u_temp(1:ncell, 1:ivar_max_use))
-        u_temp(:,1:min(ivar_max_use, old_nvar)) = &
-            & u_cpu(:,1:min(ivar_max_use, old_nvar))
+        u_temp(:,1:min(old_nvar, new_nvar)) = &
+            & u_cpu(:,1:min(old_nvar, new_nvar))
         call move_alloc(u_temp, u_cpu)
-        write (6,*) "Adjusted nvar"
 
         write (6,*) "Writing file ", new_output_basedir//'/'//amr_filename_aux
         call write_amr(new_output_basedir//'/'//amr_filename_aux, icpu)

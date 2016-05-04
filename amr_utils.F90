@@ -49,6 +49,10 @@ module amr_utils
     ! Settings to be modified
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
+    ! Use new Poisson file format (with ndim = ndim+1)?
+    ! -1 for autodetect, 0 for no, 1 for yes
+    integer :: grav_form=-1
+    
     ! Store translation tables in scratch files to save memory?
     logical :: lowmem_tables=.FALSE.
     ! In extremely brief testing on small files this didn't make a massive
@@ -957,7 +961,19 @@ module amr_utils
         read(unit=iunit) ncpu_temp
         if (ncpu /= ncpu_temp) stop "ncpu does not match!"
         read(unit=iunit) ndim_temp
-        if (ndim /= ndim_temp) stop "ndim does not match!"
+        if (grav_form==-1) then
+            if (ndim+1 == ndim_temp) then
+                grav_form = 1
+            else if (ndim == ndim_temp) then
+                grav_form = 0
+            else
+                stop "unable to detect gravity format - ndim does not match!"
+            end if
+        else if (grav_form==1) then
+            if (ndim+1 /= ndim_temp) stop "ndim does not match!"
+        else
+            if (ndim /= ndim_temp) stop "ndim does not match!"
+        end if
         read(unit=iunit) nlevelmax_cpu_temp
         if (nlevelmax_cpu /= nlevelmax_cpu_temp) stop "nlevelmax_cpu does not match!"
         read(unit=iunit) nboundary_temp
@@ -971,7 +987,16 @@ module amr_utils
         integer, intent(in)              :: iunit
         
         write(unit=iunit) ncpu
-        write(unit=iunit) ndim
+        if (grav_form==-1) then
+            write (6,*) "Warning - defaulting to old gravity format"
+            grav_form = 0
+        end if
+        
+        if (grav_form==1) then
+            write(unit=iunit) ndim+1
+        else
+            write(unit=iunit) ndim
+        end if
         write(unit=iunit) nlevelmax_cpu
         write(unit=iunit) nboundary
         

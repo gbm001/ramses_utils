@@ -491,7 +491,6 @@ module amr_utils
                       & aexp_ini, boxlen_ini
         write(unit=iunit) aexp, hexp, aexp_old, epot_tot_int, epot_tot_old
         write(unit=iunit) mass_sph
-        
         write(unit=iunit) headl_cpu(1:ncpu, 1:nlevelmax_cpu)
         write(unit=iunit) taill_cpu(1:ncpu, 1:nlevelmax_cpu)
         write(unit=iunit) numbl_cpu(1:ncpu, 1:nlevelmax_cpu)
@@ -626,7 +625,7 @@ module amr_utils
     end subroutine read_amr
 
     subroutine write_amr(filename, icpu)
-        ! Read data to RAMSES AMR cpu file
+        ! Write data to RAMSES AMR cpu file
         character(LEN=*), intent(in)            :: filename
         integer, intent(in)                     :: icpu
         
@@ -702,7 +701,7 @@ module amr_utils
                 end do
                 
                 do ind=1,twotondim
-                    iskip=ncoarse+(ind-1)*ngridmax
+                    iskip=ncoarse+(ind-1)*ngridmax_cpu
                     do i=1,ncache
                         iig(i) = son_cpu(ind_grid(i) + iskip)
                     end do
@@ -710,7 +709,7 @@ module amr_utils
                 end do
                 
                 do ind=1,twotondim
-                    iskip=ncoarse+(ind-1)*ngridmax
+                    iskip=ncoarse+(ind-1)*ngridmax_cpu
                     do i=1,ncache
                         iig(i) = cpu_map_cpu(ind_grid(i) + iskip)
                     end do
@@ -718,7 +717,7 @@ module amr_utils
                 end do
                 
                 do ind=1,twotondim
-                    iskip=ncoarse+(ind-1)*ngridmax
+                    iskip=ncoarse+(ind-1)*ngridmax_cpu
                     do i=1,ncache
                         iig(i) = flag1_cpu(ind_grid(i) + iskip)
                     end do

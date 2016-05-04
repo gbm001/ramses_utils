@@ -65,36 +65,38 @@ module stats_scratch_data
     function stats_sample(self)
         class(sample_data_type), intent(inout) :: self
         type(stats_type)                       :: stats_sample
-        
+
         double precision                       :: mean, median, std_dev, mad
-        
+
         integer                                :: M, N
         double precision                       :: bias, sum_weights, aux
 
+        mean = 0.d0; median = 0.d0; std_dev = 0.d0; mad = 0.d0
+
         N = self%n
         sum_weights = sum(self%weights(1:N))
-
-        ! mean
-        mean = sum(self%values(1:N)*self%weights(1:N)) / sum_weights
-        
-        ! standard deviation
         M = count(self%weights(1:N) > tiny(1.d0))
+
+        if (M > 0) then
+            ! mean
+            mean = sum(self%values(1:N)*self%weights(1:N)) / sum_weights
+
+            ! median
+            self%scratch(1:N) = self%values(1:N)
+            median = calc_median(self%scratch(1:N))
+        end if
+
+        ! standard deviation
         if (M > 1) then
             aux = sum(self%weights(1:N) * (self%values(1:N) - mean)**2)
             bias = (dble(M)-1.d0) / dble(M)
             std_dev = sqrt(aux / (bias * sum_weights))
-        else
-            std_dev = 0.0d0
+
+            ! median absolute deviation from the median
+            self%scratch(1:N) = abs(self%values - median)
+            mad = calc_median(self%scratch(1:N))
         end if
-        
-        ! median
-        self%scratch(1:N) = self%values(1:N)
-        median = calc_median(self%scratch(1:N))
-        
-        ! median absolute deviation from the median
-        self%scratch(1:N) = abs(self%values - median)
-        mad = calc_median(self%scratch(1:N))
-        
+
         stats_sample%mean = mean
         stats_sample%median = median
         stats_sample%std_dev = std_dev
@@ -277,8 +279,10 @@ program velocity_dispersion
             if (ind>twotondim) then
                 ! We have finished this grid on this level
                 ! Ascend - first calculate statistics and reset sample data
-                stats = sample_stack(ilevel)%stats()
-                call results_stack(ilevel)%add(stats)
+                if (sample_stack(ilevel)%n > 0) then
+                    stats = sample_stack(ilevel)%stats()
+                    call results_stack(ilevel)%add(stats)
+                end if
                 call sample_stack(ilevel)%reset()
                 ilevel = ilevel - 1
                 if (ilevel == 0) then
@@ -355,15 +359,15 @@ program velocity_dispersion
             median_stats = results_stack(ilevel)%medians%stats()
             mad_stats = results_stack(ilevel)%mads%stats()
             write (1, '(9E17.10)') &
-                        &dx_stack(ilevel), &         ! 0 this is important
-                        &mean_stats%mean, &          ! 1
-                        &mean_stats%std_dev, &       ! 2
-                        &std_dev_stats%mean, &       ! 3 either this
-                        &std_dev_stats%std_dev, &    ! 4
-                        &median_stats%median, &      ! 5
-                        &median_stats%mad, &         ! 6
-                        &mad_stats%median, &         ! 7 or this is also important
-                        &mad_stats%mad               ! 8
+                &dx_stack(ilevel), &         ! 0 this is important
+                &mean_stats%mean, &          ! 1
+                &mean_stats%std_dev, &       ! 2
+                &std_dev_stats%mean, &       ! 3 either this
+                &std_dev_stats%std_dev, &    ! 4
+                &median_stats%median, &      ! 5
+                &median_stats%mad, &         ! 6
+                &mad_stats%median, &         ! 7 or this is also important
+                &mad_stats%mad               ! 8
         end do
     end do
     

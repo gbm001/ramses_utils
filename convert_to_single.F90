@@ -6,6 +6,8 @@ program convert_to_single_program
     integer                        :: ioutput
     integer                        :: length
     
+    lowmem_tables = .TRUE.
+    
     if (command_argument_count() /= 2) then
         write (6,*) "Wrong number of command line arguments (expecting 2)!"
         write (6,*) "First argument: directory containing RAMSES outputs"
